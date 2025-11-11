@@ -7,28 +7,38 @@ import android.content.ServiceConnection
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import android.widget.Button
+import android.os.Handler
+import android.widget.TextView
 
+lateinit var timerTextView : TextView
 lateinit var timerBinder : TimerService.TimerBinder
+var isConnected = false
 
+val timerHandler = Handler(Looper.getMainLooper()) {
+    timerTextView.text = it.what.toString()
+    true
+}
+val serviceConnection = object : ServiceConnection {
+    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+        timerBinder = service as TimerService.TimerBinder
+        timerBinder.setHandler(timerHandler)
+        isConnected = true
+    }
 
+    override fun onServiceDisconnected(name: ComponentName?) {
+        isConnected = false
+    }
+}
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val serviceConnection = object : ServiceConnection {
-            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                timerBinder = service as TimerService.TimerBinder
-                //isConnected = true
-            }
-
-            override fun onServiceDisconnected(name: ComponentName?) {
-                //isConnected = false
-            }
-        }
+        timerTextView = findViewById<TextView>(R.id.textView)
 
         val timerIntent = Intent(this,TimerService::class.java)
         bindService(timerIntent,serviceConnection, Context.BIND_AUTO_CREATE)
@@ -51,7 +61,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy(){
-        //unbindService(serviceConnection)
+        unbindService(serviceConnection)
         super.onDestroy()
     }
 }
